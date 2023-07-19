@@ -20,11 +20,6 @@ type WSRPCServer struct {
 	rpcServer    rpc.Server
 
 	appName, token string
-
-	//plugins
-	ServeHTTPFunc   ServeHTTPFunc
-	ServeWSConnFunc ServeWSConnFunc
-	RegisterFunc    RegisterFunc
 }
 
 // NewServer returns a new WSRPCServer.
@@ -53,13 +48,6 @@ func (s *WSRPCServer) Serve() error {
 }
 
 func (s *WSRPCServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	// plugin
-	if s.ServeHTTPFunc != nil {
-		if err := s.ServeHTTPFunc(w, req); err != nil {
-			return
-		}
-	}
-
 	// upgrade to websockt
 	wsHandler := websocket.Handler(s.serveConn)
 	wsHandler.ServeHTTP(w, req)
@@ -68,25 +56,11 @@ func (s *WSRPCServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // serve handles websocket requests from the peer.
 // it starts a rpc server and handle this websocket connection as rpc connection.
 func (s *WSRPCServer) serveConn(ws *websocket.Conn) {
-	// plugin
-	if s.ServeWSConnFunc != nil {
-		if err := s.ServeWSConnFunc(ws); err != nil {
-			return
-		}
-	}
-
 	s.rpcServer.ServeConn(ws)
 }
 
 // Register register RPC services.
 func (s *WSRPCServer) Register(service interface{}) {
-	// plugin
-	if s.RegisterFunc != nil {
-		if err := s.RegisterFunc(service); err != nil {
-			return
-		}
-	}
-
 	s.rpcServer.Register(service)
 }
 

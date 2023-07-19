@@ -42,11 +42,6 @@ client, err := NewClient("http://localhost:8972", "ws://localhost:8972/ws")
 if err != {
     panic(err)
 }
-err = client.Dial()
-if err != {
-    panic(err)
-}
-
 defer client.Close()
 
 var reply int

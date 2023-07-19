@@ -32,7 +32,6 @@ func TestWSRPC(t *testing.T) {
 
 	client, err := NewClient("http://localhost:8972", "ws://localhost:8972/ws")
 	assert.NoError(t, err)
-	err = client.Dial()
 	assert.NoError(t, err)
 
 	var reply int
@@ -58,7 +57,6 @@ func BenchmarkWSRPC(b *testing.B) {
 
 	client, err := NewClient("http://localhost:8972", "ws://localhost:8972/ws")
 	assert.NoError(b, err)
-	err = client.Dial()
 	assert.NoError(b, err)
 	defer client.Close()
 

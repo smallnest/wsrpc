@@ -15,12 +15,6 @@ type WSRPCClient struct {
 
 	sync.RWMutex
 	client *rpc.Client
-
-	// plugins
-	DialFunc       DialFunc
-	BeforeCallFunc BeforeCallFunc
-	AfterCallFunc  AfterCallFunc
-	BeforeGoFunc   BeforeGoFunc
 }
 
 // NewClient returns a new WSRPCClient.
@@ -30,21 +24,18 @@ func NewClient(origin, wsAddr string) (*WSRPCClient, error) {
 		return nil, err
 	}
 
-	return &WSRPCClient{
+	c := &WSRPCClient{
 		origin: origin,
 		wsAddr: wsAddr,
 		config: config,
-	}, nil
-}
-
-func (c *WSRPCClient) Dial() error {
-	// plugin
-	if c.DialFunc != nil {
-		if err := c.DialFunc(c.config); err != nil {
-			return err
-		}
 	}
 
+	err = c.dial()
+
+	return c, err
+}
+
+func (c *WSRPCClient) dial() error {
 	ws, err := websocket.DialConfig(c.config)
 	if err != nil {
 		return err
@@ -55,37 +46,18 @@ func (c *WSRPCClient) Dial() error {
 	return nil
 }
 
-func (c *WSRPCClient) reconnect() error {
-	return c.Dial()
-}
-
 // Call invokes the named function, waits for it to complete, and returns its error status.
 func (c *WSRPCClient) Call(serviceMethod string, args interface{}, reply interface{}) error {
 	c.RWMutex.RLock()
 	client := c.client
 	c.RWMutex.RUnlock()
 
-	// plugin
-	if c.BeforeCallFunc != nil {
-		if err := c.BeforeCallFunc(serviceMethod, args); err != nil {
-			return err
-		}
-	}
-
 	err := client.Call(serviceMethod, args, reply)
-
-	// plugin
-	if c.AfterCallFunc != nil {
-		if err := c.AfterCallFunc(serviceMethod, args, reply, err); err != nil {
-			return err
-		}
-	}
-
 	if err != nil {
 		c.RWMutex.Lock()
 		if client == c.client {
 			c.client.Close()
-			c.reconnect()
+			c.dial()
 		}
 		c.RWMutex.Unlock()
 	}
@@ -104,7 +76,7 @@ func (c *WSRPCClient) Go(serviceMethod string, args interface{}, reply interface
 		c.RWMutex.Lock()
 		if client == c.client {
 			c.client.Close()
-			c.reconnect()
+			c.dial()
 		}
 		c.RWMutex.Unlock()
 	}
